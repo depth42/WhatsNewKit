@@ -7,6 +7,10 @@ extension WhatsNewView {
     /// The WhatsNewView FooterPadding ViewModifier
     struct FooterPadding {
         
+        /// Whether the footer is placed above the bottom safe area (`safeAreaInset`),
+        /// or measured from the bottom edge of the screen
+        let isAboveBottomSafeArea: Bool
+        
         #if os(iOS) || os(visionOS)
         /// The Horizontal SizeClass
         @Environment(\.horizontalSizeClass)
@@ -16,6 +20,14 @@ extension WhatsNewView {
         @Environment(\.verticalSizeClass)
         private var verticalSizeClass
         #endif
+        
+        /// Creates a new instance of `WhatsNewView.FooterPadding`
+        /// - Parameter isAboveBottomSafeArea: Whether the footer is placed above the bottom safe area. Default value `false`
+        init(
+            isAboveBottomSafeArea: Bool = false
+        ) {
+            self.isAboveBottomSafeArea = isAboveBottomSafeArea
+        }
         
     }
     
@@ -38,7 +50,7 @@ extension WhatsNewView.FooterPadding: ViewModifier {
                 .init(
                     top: 0,
                     leading: 150,
-                    bottom: 50,
+                    bottom: self.isAboveBottomSafeArea ? 30 : 50,
                     trailing: 150
                 )
             )
@@ -47,7 +59,7 @@ extension WhatsNewView.FooterPadding: ViewModifier {
                 .init(
                     top: 0,
                     leading: 40,
-                    bottom: 35,
+                    bottom: self.isAboveBottomSafeArea ? 20 : 35,
                     trailing: 40
                 )
             )
@@ -56,7 +68,7 @@ extension WhatsNewView.FooterPadding: ViewModifier {
                 .init(
                     top: 0,
                     leading: 20,
-                    bottom: 80,
+                    bottom: self.isAboveBottomSafeArea ? 46 : 80,
                     trailing: 20
                 )
             )

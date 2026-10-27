@@ -49,71 +49,130 @@ extension WhatsNewView: View {
     
     /// The content and behavior of the view.
     public var body: some View {
-        ZStack {
-            // Content ScrollView
-            ScrollView(
-                .vertical,
-                showsIndicators: self.layout.showsScrollViewIndicators
-            ) {
-                // Content Stack
-                VStack(
-                    spacing: self.layout.contentSpacing
+        self.layoutedContent
+            .sheet(
+                item: self.$secondaryActionPresentedView,
+                content: { $0.view }
+            )
+            .onDisappear {
+                // Save presented WhatsNew Version, if available
+                self.whatsNewVersionStore?.save(
+                    presentedVersion: self.whatsNew.version
+                )
+            }
+    }
+    
+}
+
+// MARK: - Layouted Content
+
+private extension WhatsNewView {
+    
+    /// The ScrollView with the footer below it.
+    /// Type-erased, as `ViewBuilder` can't branch on the availability of `safeAreaInset`.
+    var layoutedContent: AnyView {
+        if #available(iOS 15.0, macOS 12.0, visionOS 1.0, *) {
+            // The footer takes the room it needs above the bottom safe area,
+            // and the ScrollView ends where the footer begins
+            return AnyView(
+                self.scrollView(
+                    bottomContentInset: 0
+                )
+                .safeAreaInset(
+                    edge: .bottom,
+                    spacing: 0
                 ) {
-                    // Title
-                    self.title
-                    // Feature List
-                    VStack(
-                        alignment: .leading,
-                        spacing: self.layout.featureListSpacing
-                    ) {
-                        // Feature
-                        ForEach(
-                            self.whatsNew.features,
-                            id: \.self,
-                            content: self.feature
+                    self.footerContainer(
+                        isAboveBottomSafeArea: true
+                    )
+                }
+            )
+        } else {
+            return AnyView(
+                ZStack {
+                    // Content ScrollView
+                    self.scrollView(
+                        bottomContentInset: self.layout.scrollViewBottomContentInset
+                    )
+                    // Footer
+                    VStack {
+                        Spacer()
+                        self.footerContainer(
+                            isAboveBottomSafeArea: false
                         )
                     }
-                    .modifier(FeaturesPadding())
-                    .padding(self.layout.featureListPadding)
+                    .edgesIgnoringSafeArea(.bottom)
                 }
-                .padding(.horizontal)
-                .padding(self.layout.contentPadding)
-                // ScrollView bottom content inset
-                Color.clear
-                    .padding(
-                        .bottom,
-                        self.layout.scrollViewBottomContentInset
-                    )
-            }
-            #if os(iOS)
-            .alwaysBounceVertical(false)
-            #endif
-            // Footer
-            VStack {
-                Spacer()
-                self.footer
-                    .modifier(FooterPadding())
-                    #if os(iOS)
-                    .background(
-                        UIVisualEffectView
-                            .Representable()
-                            .edgesIgnoringSafeArea(.horizontal)
-                            .padding(self.layout.footerVisualEffectViewPadding)
-                    )
-                    #endif
-            }
-            .edgesIgnoringSafeArea(.bottom)
-        }
-        .sheet(
-            item: self.$secondaryActionPresentedView,
-            content: { $0.view }
-        )
-        .onDisappear {
-            // Save presented WhatsNew Version, if available
-            self.whatsNewVersionStore?.save(
-                presentedVersion: self.whatsNew.version
             )
         }
+    }
+    
+    /// The content ScrollView
+    /// - Parameter bottomContentInset: The room left below the content for the footer
+    func scrollView(
+        bottomContentInset: CGFloat
+    ) -> some View {
+        ScrollView(
+            .vertical,
+            showsIndicators: self.layout.showsScrollViewIndicators
+        ) {
+            // Content Stack
+            VStack(
+                spacing: self.layout.contentSpacing
+            ) {
+                // Title
+                self.title
+                // Feature List
+                VStack(
+                    alignment: .leading,
+                    spacing: self.layout.featureListSpacing
+                ) {
+                    // Feature
+                    ForEach(
+                        self.whatsNew.features,
+                        id: \.self,
+                        content: self.feature
+                    )
+                }
+                .modifier(FeaturesPadding())
+                .padding(self.layout.featureListPadding)
+            }
+            .padding(.horizontal)
+            .padding(self.layout.contentPadding)
+            // ScrollView bottom content inset
+            Color.clear
+                .padding(
+                    .bottom,
+                    bottomContentInset
+                )
+        }
+        #if os(iOS)
+        .alwaysBounceVertical(false)
+        #endif
+    }
+    
+    /// The footer with its padding and background
+    /// - Parameter isAboveBottomSafeArea: Whether the footer is placed above the bottom safe area,
+    ///   or measured from the bottom edge of the screen
+    func footerContainer(
+        isAboveBottomSafeArea: Bool
+    ) -> some View {
+        self.footer
+            .modifier(
+                FooterPadding(
+                    isAboveBottomSafeArea: isAboveBottomSafeArea
+                )
+            )
+            #if os(iOS)
+            .background(
+                UIVisualEffectView
+                    .Representable()
+                    .edgesIgnoringSafeArea(
+                        isAboveBottomSafeArea ? [.horizontal, .bottom] : .horizontal
+                    )
+                    .padding(self.layout.footerVisualEffectViewPadding)
+            )
+            #endif
     }
     
 }
